@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tetapan Joule IoT</title>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#f4f6fa;--card:#fff;--tx:#1b2433;--mut:#6b7686;--pri:#2b6cb0;--ok:#2f9e5b;--bad:#d64545;--bd:#e1e6ee}
+  @media (prefers-color-scheme:dark){:root{--bg:#10151d;--card:#18202b;--tx:#e7ecf3;--mut:#93a0b2;--bd:#273140}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,Segoe UI,Roboto,sans-serif;padding:16px}
+  .wrap{max-width:1100px;margin:auto}
+  h1{font-size:1.3rem;margin:0 0 4px}
+  .sub{color:var(--mut);font-size:.85rem;margin-bottom:14px}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
+  .card h2{font-size:.95rem;margin:0 0 10px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .badge{font-size:.78rem;padding:4px 10px;border-radius:99px;background:var(--bd);color:var(--mut)}
+  .badge.ok{background:rgba(47,158,91,.15);color:var(--ok)}
+  .badge.bad{background:rgba(214,69,69,.15);color:var(--bad)}
+  .temp{font-size:2.6rem;font-weight:700}
+  .temp small{font-size:1rem;color:var(--mut);font-weight:400}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  label{font-size:.78rem;color:var(--mut);display:block;margin-bottom:3px}
+  input{width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font-size:.95rem}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  button{border:0;border-radius:8px;padding:9px 14px;font-size:.9rem;cursor:pointer;color:#fff;background:var(--pri)}
+  button.go{background:var(--ok)} button.stop{background:var(--bad)} button.sec{background:var(--mut)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat{background:var(--bg);border-radius:8px;padding:10px}
+  .stat span{display:block;font-size:.74rem;color:var(--mut)}
+  .stat b{font-size:1.15rem}
+  .full{grid-column:1/-1}
+  canvas{max-height:300px}
+  .tw{max-height:280px;overflow:auto;border:1px solid var(--bd);border-radius:8px}
+  table{width:100%;border-collapse:collapse;font-size:.82rem}
+  th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--bd)}
+  th{position:sticky;top:0;background:var(--card);color:var(--mut)}
+  .err{color:var(--bad);font-size:.85rem;margin-top:8px;min-height:1em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Eksperimen Tetapan Joule (IoT)</h1>
+  <div class="sub">Perubahan energi listrik menjadi kalor &middot; ESP32 + DS18B20 &middot; realtime</div>
+
+  <div class="badges">
+    <span id="bBroker" class="badge">Server: memutus</span>
+    <span id="bDevice" class="badge">Alat: tidak diketahui</span>
+    <span id="bRun" class="badge">Status: idle</span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Suhu saat ini</h2>
+      <div class="temp"><span id="tNow">--.--</span> <small>&deg;C</small></div>
+      <div class="sub" id="tInfo">Menunggu data dari alat...</div>
+      <div class="btns">
+        <button id="btnStart" class="go">&#9654; START</button>
+        <button id="btnStop" class="stop">&#9632; STOP</button>
+        <button id="btnReset" class="sec">Reset data</button>
+      </div>
+      <div class="err" id="err"></div>
+    </div>
+
+    <div class="card">
+      <h2>Parameter (tersimpan di browser)</h2>
+      <div class="row">
+        <div><label>Tegangan V (Volt)</label><input id="pV" type="number" step="any"></div>
+        <div><label>Hambatan R (Ohm)</label><input id="pR" type="number" step="any"></div>
+        <div><label>Massa air m (gram)</label><input id="pM" type="number" step="any"></div>
+        <div><label>Kalor jenis c (kal/g&deg;C)</label><input id="pC" type="number" step="any"></div>
+      </div>
+      <div class="sub" style="margin-top:8px">Daya P = V&sup2;/R = <b id="pP">-</b> W</div>
+      <details style="margin-top:6px"><summary class="sub">Pengaturan topik (lanjutan)</summary>
+        <label style="margin-top:8px">Topik MQTT (harus sama dengan kode ESP32)</label>
+        <input id="pTopic" type="text">
+      </details>
+    </div>
+
+    <div class="card full">
+      <h2>Hasil</h2>
+      <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+        <div class="stat"><span>Waktu t</span><b id="sT">-</b></div>
+        <div class="stat"><span>&Delta;T</span><b id="sDT">-</b></div>
+        <div class="stat"><span>Kalor Q (kal)</span><b id="sQ">-</b></div>
+        <div class="stat"><span>Energi W (J)</span><b id="sW">-</b></div>
+        <div class="stat"><span>J = W/Q terakhir (J/kal)</span><b id="sJ">-</b></div>
+        <div class="stat"><span>J dari gradien W&ndash;Q (J/kal)</span><b id="sJr">-</b></div>
+        <div class="stat"><span>Selisih thd 4,186 J/kal</span><b id="sErr">-</b></div>
+      </div>
+    </div>
+
+    <div class="card"><h2>Suhu terhadap waktu</h2><canvas id="c1"></canvas></div>
+    <div class="card"><h2>Energi listrik W terhadap kalor Q</h2><canvas id="c2"></canvas></div>
+
+    <div class="card full">
+      <h2>Tabel data</h2>
+      <div class="btns" style="margin:0 0 10px"><button id="btnCsv">&#11015; Unduh CSV</button></div>
+      <div class="tw"><table>
+        <thead><tr><th>t (s)</th><th>T (&deg;C)</th><th>&Delta;T</th><th>Q (kal)</th><th>W (J)</th><th>J (J/kal)</th></tr></thead>
+        <tbody id="tb"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const DEFAULTS = {V:231, R:135, m:498.5, c:1, topic:'fisika-uinsgd/joule-saskia-7f3a9c'};
+const BROKER = 'wss://broker.hivemq.com:8884/mqtt';
+const J_TEORI = 4.186;
+
+let cfg = {...DEFAULTS};
+try { Object.assign(cfg, JSON.parse(localStorage.getItem('jouleCfg') || '{}')); } catch(e){}
+
+let data = [];       // {t, T}
+let T0 = null, prevRun = 0, client = null, lastMsg = 0, deviceOnline = false;
+
+// ---------- Parameter ----------
+function loadInputs(){ $('pV').value=cfg.V; $('pR').value=cfg.R; $('pM').value=cfg.m; $('pC').value=cfg.c; $('pTopic').value=cfg.topic; }
+function readInputs(){
+  const f = (id,d) => { const v = parseFloat($(id).value); return isFinite(v) && v>0 ? v : d; };
+  cfg.V=f('pV',cfg.V); cfg.R=f('pR',cfg.R); cfg.m=f('pM',cfg.m); cfg.c=f('pC',cfg.c);
+  const tp = $('pTopic').value.trim();
+  const topicChanged = tp && tp !== cfg.topic;
+  if (tp) cfg.topic = tp;
+  try { localStorage.setItem('jouleCfg', JSON.stringify(cfg)); } catch(e){}
+  $('pP').textContent = (cfg.V*cfg.V/cfg.R).toFixed(2);
+  if (topicChanged) connect();
+  render();
+}
+['pV','pR','pM','pC','pTopic'].forEach(id => $(id).addEventListener('change', readInputs));
+['pV','pR','pM','pC'].forEach(id => $(id).addEventListener('input', readInputs));
+
+// ---------- Perhitungan ----------
+function compute(){
+  const P = cfg.V*cfg.V/cfg.R;
+  return data.map(d => {
+    const dT = d.T - T0, W = P*d.t, Q = cfg.m*cfg.c*dT;
+    return {t:d.t, T:d.T, dT, Q, W, J: Q>0 ? W/Q : null};
+  });
+}
+function regress(rows){
+  const p = rows.filter(r => r.Q>0);
+  const n = p.length; if (n<3) return null;
+  let sx=0, sy=0, sxx=0, sxy=0;
+  p.forEach(r => { sx+=r.Q; sy+=r.W; sxx+=r.Q*r.Q; sxy+=r.Q*r.W; });
+  const den = n*sxx - sx*sx; if (!den) return null;
+  return (n*sxy - sx*sy)/den;
+}
+
+// ---------- Grafik ----------
+const mk = (id, xl, yl) => new Chart($(id), {
+  type:'line',
+  data:{datasets:[{data:[],borderColor:'#2b6cb0',backgroundColor:'#2b6cb0',pointRadius:2,tension:.2}]},
+  options:{animation:false,parsing:false,plugins:{legend:{display:false}},
+    scales:{x:{type:'linear',title:{display:true,text:xl}},y:{title:{display:true,text:yl}}}}
+});
+const ch1 = mk('c1','t (s)','Suhu (°C)');
+const ch2 = mk('c2','Q (kal)','W (J)');
+
+// ---------- Render ----------
+function fmt(x,d=2){ return (x===null||x===undefined||!isFinite(x)) ? '-' : x.toFixed(d); }
+function render(){
+  $('pP').textContent = (cfg.V*cfg.V/cfg.R).toFixed(2);
+  if (!data.length || T0===null){
+    ['sT','sDT','sQ','sW','sJ','sJr','sErr'].forEach(i => $(i).textContent='-');
+    ch1.data.datasets[0].data=[]; ch2.data.datasets[0].data=[];
+    ch1.update(); ch2.update(); $('tb').innerHTML=''; return;
+  }
+  const rows = compute(), last = rows[rows.length-1], slope = regress(rows);
+  $('sT').textContent = fmt(last.t,0)+' s';
+  $('sDT').textContent = fmt(last.dT)+' °C';
+  $('sQ').textContent = fmt(last.Q);
+  $('sW').textContent = fmt(last.W);
+  $('sJ').textContent = fmt(last.J,3);
+  $('sJr').textContent = fmt(slope,3);
+  const ref = slope ?? last.J;
+  $('sErr').textContent = ref ? fmt(Math.abs(ref-J_TEORI)/J_TEORI*100,1)+' %' : '-';
+
+  ch1.data.datasets[0].data = rows.map(r => ({x:r.t,y:r.T}));
+  ch2.data.datasets[0].data = rows.filter(r=>r.Q>0).map(r => ({x:r.Q,y:r.W}));
+  ch1.update(); ch2.update();
+
+  const tail = rows.slice(-150).reverse();
+  $('tb').innerHTML = tail.map(r =>
+    `<tr><td>${fmt(r.t,0)}</td><td>${fmt(r.T)}</td><td>${fmt(r.dT)}</td><td>${fmt(r.Q)}</td><td>${fmt(r.W)}</td><td>${fmt(r.J,3)}</td></tr>`
+  ).join('');
+}
+
+// ---------- MQTT ----------
+function setBadge(el, text, cls){ el.textContent=text; el.className='badge '+(cls||''); }
+function connect(){
+  if (client){ try{ client.end(true); }catch(e){} }
+  setBadge($('bBroker'),'Server: menghubungkan...','');
+  client = mqtt.connect(BROKER, {clientId:'web-'+Math.random().toString(16).slice(2,10), reconnectPeriod:3000, connectTimeout:8000});
+  client.on('connect', () => {
+    setBadge($('bBroker'),'Server: terhubung','ok');
+    client.subscribe([cfg.topic+'/data', cfg.topic+'/status']);
+  });
+  client.on('close', () => setBadge($('bBroker'),'Server: terputus','bad'));
+  client.on('error', () => setBadge($('bBroker'),'Server: error','bad'));
+  client.on('message', (topic, payload) => {
+    const s = payload.toString();
+    if (topic.endsWith('/status')){
+      deviceOnline = (s==='online');
+      setBadge($('bDevice'), deviceOnline ? 'Alat: online' : 'Alat: offline', deviceOnline ? 'ok':'bad');
+      return;
+    }
+    let m; try { m = JSON.parse(s); } catch(e){ return; }
+    lastMsg = Date.now();
+    if (m.err){ $('err').textContent = 'Sensor DS18B20 tidak terdeteksi, periksa kabel.'; return; }
+    $('err').textContent = '';
+    $('tNow').textContent = Number(m.T).toFixed(2);
+    $('tInfo').textContent = 'Diperbarui ' + new Date().toLocaleTimeString('id-ID');
+    if (m.run === 1){
+      if (prevRun !== 1){ data = []; }
+      T0 = m.T0;
+      if (!data.length || m.t > data[data.length-1].t) data.push({t:m.t, T:m.T});
+      setBadge($('bRun'),'Status: mengukur','ok');
+      render();
+    } else {
+      setBadge($('bRun'),'Status: idle','');
+    }
+    prevRun = m.run;
+  });
+}
+function send(cmd){
+  if (!client || !client.connected){ $('err').textContent='Belum terhubung ke server.'; return; }
+  client.publish(cfg.topic+'/cmd', cmd);
+}
+
+$('btnStart').onclick = () => send('START');
+$('btnStop').onclick  = () => send('STOP');
+$('btnReset').onclick = () => { data=[]; T0=null; render(); };
+$('btnCsv').onclick = () => {
+  if (!data.length) return;
+  const rows = compute();
+  let csv = 'time_s,temperature_C,deltaT_C,Q_kal,W_J,J_J_per_kal\n';
+  rows.forEach(r => csv += [r.t,r.T,r.dT.toFixed(3),r.Q.toFixed(3),r.W.toFixed(3),r.J===null?'':r.J.toFixed(4)].join(',')+'\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = 'joule_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
+  a.click();
+};
+
+// Tandai alat tidak aktif kalau lama tidak ada data
+setInterval(() => {
+  if (lastMsg && Date.now()-lastMsg > 6000){
+    $('tInfo').textContent = 'Tidak ada data baru. Cek alat/WiFi ESP32.';
+  }
+}, 2000);
+
+loadInputs(); render(); connect();
+</script>
+</body>
+</html>
