@@ -74,6 +74,7 @@
         <div><label>Hambatan R (Ohm)</label><input id="pR" type="number" step="any"></div>
         <div><label>Massa air m (gram)</label><input id="pM" type="number" step="any"></div>
         <div><label>Kalor jenis c (kal/g&deg;C)</label><input id="pC" type="number" step="any"></div>
+        <div><label>Durasi data (detik, 0 = manual)</label><input id="pD" type="number" step="1" min="0"></div>
       </div>
       <div class="sub" style="margin-top:8px">Daya P = V&sup2;/R = <b id="pP">-</b> W</div>
       <details style="margin-top:6px"><summary class="sub">Pengaturan topik (lanjutan)</summary>
@@ -111,7 +112,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const DEFAULTS = {V:231, R:135, m:498.5, c:1, topic:'fisika-uinsgd/joule-saskia-7f3a9c'};
+const DEFAULTS = {V:231, R:135, m:498.5, c:1, dur:300, topic:'fisika-uinsgd/joule-saskia-7f3a9c'};
 const BROKER = 'wss://broker.hivemq.com:8884/mqtt';
 const J_TEORI = 4.186;
 
@@ -122,10 +123,11 @@ let data = [];       // {t, T}
 let T0 = null, prevRun = 0, client = null, lastMsg = 0, deviceOnline = false;
 
 // ---------- Parameter ----------
-function loadInputs(){ $('pV').value=cfg.V; $('pR').value=cfg.R; $('pM').value=cfg.m; $('pC').value=cfg.c; $('pTopic').value=cfg.topic; }
+function loadInputs(){ $('pV').value=cfg.V; $('pR').value=cfg.R; $('pM').value=cfg.m; $('pC').value=cfg.c; $('pD').value=cfg.dur; $('pTopic').value=cfg.topic; }
 function readInputs(){
   const f = (id,d) => { const v = parseFloat($(id).value); return isFinite(v) && v>0 ? v : d; };
   cfg.V=f('pV',cfg.V); cfg.R=f('pR',cfg.R); cfg.m=f('pM',cfg.m); cfg.c=f('pC',cfg.c);
+  const d = parseInt($('pD').value); cfg.dur = (isFinite(d) && d>=0) ? d : cfg.dur;
   const tp = $('pTopic').value.trim();
   const topicChanged = tp && tp !== cfg.topic;
   if (tp) cfg.topic = tp;
@@ -134,8 +136,8 @@ function readInputs(){
   if (topicChanged) connect();
   render();
 }
-['pV','pR','pM','pC','pTopic'].forEach(id => $(id).addEventListener('change', readInputs));
-['pV','pR','pM','pC'].forEach(id => $(id).addEventListener('input', readInputs));
+['pV','pR','pM','pC','pD','pTopic'].forEach(id => $(id).addEventListener('change', readInputs));
+['pV','pR','pM','pC','pD'].forEach(id => $(id).addEventListener('input', readInputs));
 
 // ---------- Perhitungan ----------
 function compute(){
@@ -222,7 +224,7 @@ function connect(){
       if (prevRun !== 1){ data = []; }
       T0 = m.T0;
       if (!data.length || m.t > data[data.length-1].t) data.push({t:m.t, T:m.T});
-      setBadge($('bRun'),'Status: mengukur','ok');
+      setBadge($('bRun'),'Status: mengukur ('+Math.round(m.t)+(cfg.dur?' / '+cfg.dur:'')+' s)','ok');
       render();
     } else {
       setBadge($('bRun'),'Status: idle','');
@@ -235,7 +237,7 @@ function send(cmd){
   client.publish(cfg.topic+'/cmd', cmd);
 }
 
-$('btnStart').onclick = () => send('START');
+$('btnStart').onclick = () => send('START:' + (cfg.dur || 0));
 $('btnStop').onclick  = () => send('STOP');
 $('btnReset').onclick = () => { data=[]; T0=null; render(); };
 $('btnCsv').onclick = () => {
