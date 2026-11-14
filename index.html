@@ -3,262 +3,1062 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tetapan Joule IoT</title>
+<title>Aplikasi Eksperimen Fisika</title>
 <script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
-  :root{--bg:#f4f6fa;--card:#fff;--tx:#1b2433;--mut:#6b7686;--pri:#2b6cb0;--ok:#2f9e5b;--bad:#d64545;--bd:#e1e6ee}
-  @media (prefers-color-scheme:dark){:root{--bg:#10151d;--card:#18202b;--tx:#e7ecf3;--mut:#93a0b2;--bd:#273140}}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,Segoe UI,Roboto,sans-serif;padding:16px}
-  .wrap{max-width:1100px;margin:auto}
-  h1{font-size:1.3rem;margin:0 0 4px}
-  .sub{color:var(--mut);font-size:.85rem;margin-bottom:14px}
-  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
-  .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
-  .card h2{font-size:.95rem;margin:0 0 10px}
-  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-  .badge{font-size:.78rem;padding:4px 10px;border-radius:99px;background:var(--bd);color:var(--mut)}
-  .badge.ok{background:rgba(47,158,91,.15);color:var(--ok)}
-  .badge.bad{background:rgba(214,69,69,.15);color:var(--bad)}
-  .temp{font-size:2.6rem;font-weight:700}
-  .temp small{font-size:1rem;color:var(--mut);font-weight:400}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  label{font-size:.78rem;color:var(--mut);display:block;margin-bottom:3px}
-  input{width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font-size:.95rem}
-  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-  button{border:0;border-radius:8px;padding:9px 14px;font-size:.9rem;cursor:pointer;color:#fff;background:var(--pri)}
-  button.go{background:var(--ok)} button.stop{background:var(--bad)} button.sec{background:var(--mut)}
-  button:disabled{opacity:.45;cursor:not-allowed}
-  .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .stat{background:var(--bg);border-radius:8px;padding:10px}
-  .stat span{display:block;font-size:.74rem;color:var(--mut)}
-  .stat b{font-size:1.15rem}
-  .full{grid-column:1/-1}
-  canvas{max-height:300px}
-  .tw{max-height:280px;overflow:auto;border:1px solid var(--bd);border-radius:8px}
-  table{width:100%;border-collapse:collapse;font-size:.82rem}
-  th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--bd)}
-  th{position:sticky;top:0;background:var(--card);color:var(--mut)}
-  .err{color:var(--bad);font-size:.85rem;margin-top:8px;min-height:1em}
+:root{
+  --bg:#F4F8FF;--card:#FFFFFF;--blue:#38BDF8;--blued:#1E3A5F;--green:#34D399;--purple:#A78BFA;
+  --yellow:#FBBF24;--red:#F87171;--mut:#6B7280;--bd:#979DA2;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:#1A1A1A;font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;font-size:14px}
+.hidden{display:none!important}
+.page{height:100vh;padding:16px;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.page.center{align-items:center;justify-content:center}
+.card{background:var(--card);border-radius:12px;padding:12px 16px}
+.ct{font-size:14px;font-weight:700;color:var(--blued);margin-bottom:8px}
+.sub{color:var(--mut);font-size:12px}
+
+/* tombol */
+.btn{border:0;border-radius:6px;height:32px;padding:0 14px;color:#fff;font-size:14px;cursor:pointer;font-family:inherit;background:var(--blue)}
+.btn:hover{filter:brightness(.92)}
+.btn.blue{background:var(--blue)}.btn.green{background:var(--green)}.btn.red{background:var(--red)}
+.btn.purple{background:var(--purple)}.btn.dark{background:var(--blued)}
+.btn.yellow{background:var(--yellow);color:var(--blued)}
+.btn.big{height:38px;font-weight:700;font-size:13px}
+.btn.wide{width:100%}
+.btn:disabled{background:#A9B2BC!important;color:#fff!important;cursor:not-allowed;filter:none}
+.inp{height:32px;border:2px solid var(--bd);border-radius:6px;background:#F9F9FA;padding:0 8px;font-size:14px;font-family:inherit;color:#1A1A1A;min-width:0}
+.inp:focus{outline:none;border-color:var(--blue)}
+.inp:disabled{opacity:.6}
+.sel{height:32px;border:0;border-radius:6px;background:var(--blue);color:#fff;padding:0 6px;font-size:14px;font-family:inherit}
+
+/* menu */
+.menucard{background:var(--card);border-radius:16px;padding:40px 40px 40px;text-align:center;max-width:640px;width:100%}
+.menucard h1{margin:0 0 4px;font-size:26px;color:var(--blued)}
+.menucard p{margin:0 0 30px;color:var(--mut);font-size:14px}
+.menubtns{display:flex;gap:24px;justify-content:center;flex-wrap:wrap}
+.bigbtn{width:240px;height:130px;border:0;border-radius:14px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;line-height:1.6;font-family:inherit}
+.bigbtn.b1{background:var(--blue)}.bigbtn.b1:hover{background:#0EA5E9}
+.bigbtn.b2{background:var(--purple)}.bigbtn.b2:hover{background:#8B5CF6}
+
+/* top bar */
+.topbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.topbar h2{margin:0;font-size:16px;color:var(--blued)}
+
+/* realtime */
+.rt{display:grid;grid-template-columns:360px 1fr;gap:16px;flex:1;min-height:0}
+.rtleft{overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px}
+.rtright{display:flex;flex-direction:column;min-height:0}
+.prow{display:flex;align-items:center;gap:6px;margin:4px 0}
+.prow label{width:150px;flex:none;font-size:14px}
+.prow .inp{width:110px}
+.arus{font-size:12px;font-weight:700;color:var(--purple);margin-top:6px;white-space:pre-wrap}
+.conn{font-size:11px;font-weight:700;margin-top:6px}
+.stat{white-space:pre;font-size:13px;line-height:1.5}
+.warn{color:var(--red);font-size:13px;margin-top:4px}
+.tbl{border:1px solid #E5E7EB;border-radius:6px;overflow:auto;background:#fff}
+.tbl table{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{position:sticky;top:0;background:#E0F2FE;color:var(--blued);padding:4px 6px;font-weight:700}
+.tbl td{padding:3px 6px;text-align:center;color:var(--blued);border-top:1px solid #EEF2F7}
+.chartbox{position:relative;flex:1;min-height:300px}
+
+/* hasil */
+.hdr h1{margin:0 0 2px;font-size:20px;color:var(--blued)}
+.pgrid{display:flex;flex-wrap:wrap;align-items:center;gap:8px 8px}
+.pgrid .inp{width:80px}
+.pgrid .lab{font-size:14px}
+.tabs{flex:1;min-height:0;background:var(--card);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.tabbar{display:flex;gap:3px;background:#979DA2;border-radius:8px;padding:3px;overflow-x:auto;align-self:center;max-width:100%}
+.tabbar button{border:0;background:transparent;color:#fff;padding:6px 14px;border-radius:6px;font-size:14px;cursor:pointer;white-space:nowrap;font-family:inherit}
+.tabbar button.active{background:var(--blue)}
+.pane{flex:1;min-height:0;display:none;flex-direction:column}
+.pane.active{display:flex}
+.txt{flex:1;min-height:0;overflow:auto;background:#FBFDFF;color:var(--blued);border:2px solid #E5E7EB;border-radius:10px;padding:12px;white-space:pre-wrap;font-size:13px;line-height:1.45}
+.tblbig{flex:1;min-height:0}
+.tblbig table{font-size:13px}
+.tblbig th,.tblbig td{padding:5px 8px}
+.cards{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:12px;padding:4px 4px}
+.sc{border-radius:16px;color:#fff;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:8px}
+.sc .t{font-size:12px;font-weight:700}
+.sc .v{font-size:20px;font-weight:700;word-break:break-word}
+.sc.span3{grid-column:1/-1}
+
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.dlg{background:#fff;border-radius:12px;padding:20px;max-width:460px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.dt{font-weight:700;font-size:16px;color:var(--blued);margin-bottom:8px}
+.dm{white-space:pre-wrap;font-size:14px;margin-bottom:16px;line-height:1.5}
+.db{display:flex;gap:8px;justify-content:flex-end}
+
+@media (max-width:900px){
+  .page{height:auto;min-height:100vh;overflow:visible}
+  .rt{grid-template-columns:1fr}
+  .rtleft{overflow:visible}
+  .chartbox{min-height:340px;flex:none;height:340px}
+  .tabs{min-height:520px}
+  .cards{grid-template-columns:1fr 1fr}
+  .sc.span3{grid-column:1/-1}
+  .prow label{width:130px}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Eksperimen Tetapan Joule (IoT)</h1>
-  <div class="sub">Perubahan energi listrik menjadi kalor &middot; ESP32 + DS18B20 &middot; realtime</div>
 
-  <div class="badges">
-    <span id="bBroker" class="badge">Server: memutus</span>
-    <span id="bDevice" class="badge">Alat: tidak diketahui</span>
-    <span id="bRun" class="badge">Status: idle</span>
+<!-- ================= MENU UTAMA ================= -->
+<div id="pgMenu" class="page center">
+  <div class="menucard">
+    <h1>🔬  APLIKASI EKSPERIMEN FISIKA</h1>
+    <p>ESP32 + DS18B20  •  Pilih fitur eksperimen</p>
+    <div class="menubtns">
+      <button class="bigbtn b1" id="goReal">⚡ FITUR 1<br>Energi Listrik → Kalor<br>(Realtime ESP32)</button>
+      <button class="bigbtn b2" id="goUpload">📂 FITUR 2<br>Upload CSV / Excel<br>(Energi Listrik → Kalor)</button>
+    </div>
+    <input type="file" id="fileIn" accept=".csv,.txt,.xlsx,.xlsm,.xls" class="hidden">
   </div>
+</div>
 
-  <div class="grid">
-    <div class="card">
-      <h2>Suhu saat ini</h2>
-      <div class="temp"><span id="tNow">--.--</span> <small>&deg;C</small></div>
-      <div class="sub" id="tInfo">Menunggu data dari alat...</div>
-      <div class="btns">
-        <button id="btnStart" class="go">&#9654; START</button>
-        <button id="btnStop" class="stop">&#9632; STOP</button>
-        <button id="btnReset" class="sec">Reset data</button>
+<!-- ================= FITUR 1: REALTIME ================= -->
+<div id="pgReal" class="page hidden">
+  <div class="topbar">
+    <button class="btn yellow" id="rtBack">← Menu Utama</button>
+    <h2>⚡ Fitur 1 - Energi Listrik → Kalor (Realtime)</h2>
+  </div>
+  <div class="rt">
+    <div class="rtleft">
+      <div class="card">
+        <div class="ct">⚙ Parameter Eksperimen</div>
+        <div class="prow"><label>Tegangan awal V (Volt)</label><input id="rV" class="inp" placeholder="mis. 235" inputmode="decimal"></div>
+        <div class="prow"><label>Hambatan awal R (Ω)</label><input id="rR" class="inp" placeholder="mis. 135" inputmode="decimal"></div>
+        <div class="prow"><label>Massa air m</label><input id="rM" class="inp" placeholder="mis. 500" inputmode="decimal"><select id="rMu" class="sel"><option value="gram">gram</option><option value="ml">ml</option></select></div>
+        <div class="prow"><label>Kalor jenis c (kal/g°C)</label><input id="rC" class="inp" placeholder="mis. 1" inputmode="decimal"></div>
+        <div class="arus" id="arusLbl">Daya P = V²/R  :  -- W     Arus I = V/R  :  -- A</div>
       </div>
-      <div class="err" id="err"></div>
+
+      <div class="card">
+        <div class="ct">🔌 Koneksi Alat (ESP32)</div>
+        <button class="btn blue wide" id="btnConn">Hubungkan</button>
+        <div class="conn" id="connLbl" style="color:var(--red)">● Server belum terhubung</div>
+        <details style="margin-top:8px"><summary class="sub">Pengaturan topik (lanjutan)</summary>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <input id="topicIn" class="inp" style="flex:1" placeholder="topik MQTT">
+            <button class="btn purple" id="topicSave">Terapkan</button>
+          </div>
+          <div class="sub" style="margin-top:4px">Harus sama dengan TOPIC_BASE di kode ESP32.</div>
+        </details>
+      </div>
+
+      <div class="card">
+        <div class="ct">⏱ Durasi Pemanasan</div>
+        <div class="sub" style="font-size:10px">Isi dalam detik agar berhenti otomatis.<br>Kosongkan untuk mode manual.</div>
+        <input id="rDur" class="inp" style="width:100%;margin:8px 0" placeholder="mis. 300 (detik)" inputmode="numeric">
+        <div id="timerLbl" style="font-size:12px;font-weight:700;color:var(--blued)">⏱ Durasi belum diatur</div>
+      </div>
+
+      <div class="card">
+        <div class="ct">🎛 Kontrol</div>
+        <button class="btn green big wide" id="btnStart" disabled>▶ MULAI</button>
+        <button class="btn yellow wide" id="btnReset" style="margin-top:8px;height:36px">↻ RESET DATA</button>
+        <button class="btn dark wide" id="btnFinish" style="margin-top:8px;height:36px">✔ Selesai &amp; Analisis</button>
+      </div>
+
+      <div class="card">
+        <div class="ct">📊 Status Realtime</div>
+        <div id="stMeasure" style="font-size:13px;font-weight:700;color:var(--yellow)">● Standby</div>
+        <div class="stat" id="stWaktu">Waktu berjalan     : -- s</div>
+        <div class="stat" id="stSuhu">Suhu saat ini      : -- °C</div>
+        <div class="stat" id="stT0">Suhu awal T0       : -- °C (belum terkunci)</div>
+        <div class="stat" id="stT1">Suhu akhir sementara: -- °C</div>
+        <div class="stat" id="stDT">ΔT sementara       : -- °C</div>
+        <div class="stat" id="stN">Jumlah Data        : 0</div>
+        <div class="warn" id="warnLbl"></div>
+      </div>
+
+      <div class="card">
+        <div class="ct">Data Terakhir</div>
+        <div class="tbl" id="rtTblWrap" style="max-height:170px"><table><thead><tr><th>No</th><th>t (s)</th><th>T (°C)</th></tr></thead><tbody id="rtTb"></tbody></table></div>
+      </div>
     </div>
 
-    <div class="card">
-      <h2>Parameter (tersimpan di browser)</h2>
-      <div class="row">
-        <div><label>Tegangan V (Volt)</label><input id="pV" type="number" step="any"></div>
-        <div><label>Hambatan R (Ohm)</label><input id="pR" type="number" step="any"></div>
-        <div><label>Massa air m (gram)</label><input id="pM" type="number" step="any"></div>
-        <div><label>Kalor jenis c (kal/g&deg;C)</label><input id="pC" type="number" step="any"></div>
-        <div><label>Durasi data (detik, 0 = manual)</label><input id="pD" type="number" step="1" min="0"></div>
-      </div>
-      <div class="sub" style="margin-top:8px">Daya P = V&sup2;/R = <b id="pP">-</b> W</div>
-      <details style="margin-top:6px"><summary class="sub">Pengaturan topik (lanjutan)</summary>
-        <label style="margin-top:8px">Topik MQTT (harus sama dengan kode ESP32)</label>
-        <input id="pTopic" type="text">
-      </details>
-    </div>
-
-    <div class="card full">
-      <h2>Hasil</h2>
-      <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
-        <div class="stat"><span>Waktu t</span><b id="sT">-</b></div>
-        <div class="stat"><span>&Delta;T</span><b id="sDT">-</b></div>
-        <div class="stat"><span>Kalor Q (kal)</span><b id="sQ">-</b></div>
-        <div class="stat"><span>Energi W (J)</span><b id="sW">-</b></div>
-        <div class="stat"><span>J = W/Q terakhir (J/kal)</span><b id="sJ">-</b></div>
-        <div class="stat"><span>J dari gradien W&ndash;Q (J/kal)</span><b id="sJr">-</b></div>
-        <div class="stat"><span>Selisih thd 4,186 J/kal</span><b id="sErr">-</b></div>
-      </div>
-    </div>
-
-    <div class="card"><h2>Suhu terhadap waktu</h2><canvas id="c1"></canvas></div>
-    <div class="card"><h2>Energi listrik W terhadap kalor Q</h2><canvas id="c2"></canvas></div>
-
-    <div class="card full">
-      <h2>Tabel data</h2>
-      <div class="btns" style="margin:0 0 10px"><button id="btnCsv">&#11015; Unduh CSV</button></div>
-      <div class="tw"><table>
-        <thead><tr><th>t (s)</th><th>T (&deg;C)</th><th>&Delta;T</th><th>Q (kal)</th><th>W (J)</th><th>J (J/kal)</th></tr></thead>
-        <tbody id="tb"></tbody>
-      </table></div>
+    <div class="card rtright">
+      <div class="ct" style="margin-bottom:4px">Grafik Suhu terhadap Waktu (Pemanasan Air)</div>
+      <div class="chartbox"><canvas id="cvRT"></canvas></div>
     </div>
   </div>
 </div>
 
+<!-- ================= HASIL ANALISIS ================= -->
+<div id="pgRes" class="page hidden">
+  <div class="topbar"><button class="btn yellow" id="resBack">← Menu Utama</button></div>
+
+  <div class="card hdr">
+    <h1>📊 Hasil Analisis - Energi Listrik → Kalor</h1>
+    <div class="sub" id="subtitle"></div>
+  </div>
+
+  <div class="card">
+    <div class="ct">⚙ Parameter Eksperimen</div>
+    <div class="pgrid">
+      <span class="lab">V awal</span><input id="pV" class="inp" inputmode="decimal">
+      <span class="lab">R awal (Ω)</span><input id="pR" class="inp" inputmode="decimal">
+      <select id="pMu" class="sel"><option value="gram">m (gram)</option><option value="ml">m (ml)</option></select>
+      <input id="pM" class="inp" inputmode="decimal">
+      <span class="lab">c (kal/g°C)</span><input id="pC" class="inp" inputmode="decimal">
+      <button class="btn blue" id="btnProses" style="margin-left:8px">🔍 Proses Analisis</button>
+      <button class="btn purple" id="btnZip" disabled>💾 Unduh Semua Hasil (ZIP)</button>
+    </div>
+    <div class="pgrid" style="margin-top:8px">
+      <span class="lab">V akhir</span><input id="pV2" class="inp" placeholder="opsional" inputmode="decimal">
+      <span class="lab">R akhir (Ω)</span><input id="pR2" class="inp" placeholder="opsional" inputmode="decimal">
+      <span class="sub">← diukur setelah percobaan. Jika diisi, V dan R yang dipakai = rata-rata nilai awal dan akhir.</span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tabbar" id="tabbar"></div>
+    <div class="pane active" data-tab="Grafik Suhu"><div class="chartbox"><canvas id="cvRes"></canvas></div></div>
+    <div class="pane" data-tab="Tabel Data"><div class="tbl tblbig"><table><thead><tr><th>No</th><th>Waktu (s)</th><th>Suhu (°C)</th></tr></thead><tbody id="resTb"></tbody></table></div></div>
+    <div class="pane" data-tab="Parameter Eksperimen"><div class="txt" id="txtParam"></div></div>
+    <div class="pane" data-tab="Perhitungan"><div class="txt" id="txtCalc"></div></div>
+    <div class="pane" data-tab="Ringkasan Hasil">
+      <div class="cards">
+        <div class="sc" style="background:var(--blue)"><div class="t">ENERGI LISTRIK (W)</div><div class="v" id="cW">--</div></div>
+        <div class="sc" style="background:var(--green)"><div class="t">KALOR DISERAP AIR (Q)</div><div class="v" id="cQ">--</div></div>
+        <div class="sc" style="background:var(--yellow)"><div class="t">PERUBAHAN SUHU (ΔT)</div><div class="v" id="cDT">--</div></div>
+        <div class="sc" style="background:var(--purple)"><div class="t">TETAPAN JOULE (J)</div><div class="v" id="cJ">--</div></div>
+        <div class="sc" style="background:var(--blue)"><div class="t">DAYA LISTRIK (P)</div><div class="v" id="cP">--</div></div>
+        <div class="sc" style="background:var(--green)"><div class="t">DAYA EFEKTIF (P efektif)</div><div class="v" id="cPe">--</div></div>
+        <div class="sc span3" style="background:var(--purple)"><div class="t">EFISIENSI PEMANASAN (η = P efektif / P)</div><div class="v" id="cEta">--</div></div>
+      </div>
+    </div>
+    <div class="pane" data-tab="Materi & Interpretasi"><div class="txt" id="txtMateri"></div></div>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
 <script>
+"use strict";
+/* ====================================================================
+   KONSTANTA & TEMA (disalin dari SUHU8.py)
+   ==================================================================== */
 const $ = id => document.getElementById(id);
-const DEFAULTS = {V:231, R:135, m:498.5, c:1, dur:300, topic:'fisika-uinsgd/joule-saskia-7f3a9c'};
-const BROKER = 'wss://broker.hivemq.com:8884/mqtt';
-const J_TEORI = 4.186;
+const C = {BG:"#F4F8FF",CARD:"#FFFFFF",BLUE:"#38BDF8",BLUE_DARK:"#1E3A5F",GREEN:"#34D399",PURPLE:"#A78BFA",YELLOW:"#FBBF24",RED:"#F87171"};
+const J_REFERENSI = 4.184;
+const RHO_AIR = 0.997;
+const SENSOR_NAMA = "DS18B20";
+const SENSOR_PRODUSEN = "Dallas/Maxim, kini Analog Devices";
+const SENSOR_U = 0.5;
+const SENSOR_RENTANG = "-10 °C s.d. +85 °C";
+const MAX_ROWS_TABLE = 15;
+const BROKER = "wss://broker.hivemq.com:8884/mqtt";
+const DEFAULT_TOPIC = "fisika-uinsgd/joule-saskia-7f3a9c";
 
-let cfg = {...DEFAULTS};
-try { Object.assign(cfg, JSON.parse(localStorage.getItem('jouleCfg') || '{}')); } catch(e){}
-
-let data = [];       // {t, T}
-let T0 = null, prevRun = 0, client = null, lastMsg = 0, deviceOnline = false;
-
-// ---------- Parameter ----------
-function loadInputs(){ $('pV').value=cfg.V; $('pR').value=cfg.R; $('pM').value=cfg.m; $('pC').value=cfg.c; $('pD').value=cfg.dur; $('pTopic').value=cfg.topic; }
-function readInputs(){
-  const f = (id,d) => { const v = parseFloat($(id).value); return isFinite(v) && v>0 ? v : d; };
-  cfg.V=f('pV',cfg.V); cfg.R=f('pR',cfg.R); cfg.m=f('pM',cfg.m); cfg.c=f('pC',cfg.c);
-  const d = parseInt($('pD').value); cfg.dur = (isFinite(d) && d>=0) ? d : cfg.dur;
-  const tp = $('pTopic').value.trim();
-  const topicChanged = tp && tp !== cfg.topic;
-  if (tp) cfg.topic = tp;
-  try { localStorage.setItem('jouleCfg', JSON.stringify(cfg)); } catch(e){}
-  $('pP').textContent = (cfg.V*cfg.V/cfg.R).toFixed(2);
-  if (topicChanged) connect();
-  render();
+/* ====================================================================
+   FUNGSI BANTU: FORMAT ANGKA
+   ==================================================================== */
+function keFloat(t){
+  const s = String(t).trim().replace(/,/g, ".");
+  const n = Number(s);
+  if (s === "" || !isFinite(n)) throw new Error("bukan angka");
+  return n;
 }
-['pV','pR','pM','pC','pD','pTopic'].forEach(id => $(id).addEventListener('change', readInputs));
-['pV','pR','pM','pC','pD'].forEach(id => $(id).addEventListener('input', readInputs));
-
-// ---------- Perhitungan ----------
-function compute(){
-  const P = cfg.V*cfg.V/cfg.R;
-  return data.map(d => {
-    const dT = d.T - T0, W = P*d.t, Q = cfg.m*cfg.c*dT;
-    return {t:d.t, T:d.T, dT, Q, W, J: Q>0 ? W/Q : null};
-  });
+function dayaDariVR(V, R){
+  if (R <= 0) throw new Error("Hambatan (R) harus lebih besar dari nol.");
+  return V * V / R;
 }
-function regress(rows){
-  const p = rows.filter(r => r.Q>0);
-  const n = p.length; if (n<3) return null;
-  let sx=0, sy=0, sxx=0, sxy=0;
-  p.forEach(r => { sx+=r.Q; sy+=r.W; sxx+=r.Q*r.Q; sxy+=r.Q*r.W; });
-  const den = n*sxx - sx*sx; if (!den) return null;
-  return (n*sxy - sx*sy)/den;
+function massaKeGram(n, satuan){ return satuan === "ml" ? n * RHO_AIR : n; }
+function angka(x, d){
+  const a = Math.abs(x);
+  if (d === undefined || d === null) d = a >= 1000 ? 0 : (a >= 10 ? 2 : 3);
+  let t = x.toFixed(d);
+  if (t.includes(".")) t = t.replace(/0+$/, "").replace(/\.$/, "");
+  return t.replace(/\./g, ",");
 }
-
-// ---------- Grafik ----------
-const mk = (id, xl, yl) => new Chart($(id), {
-  type:'line',
-  data:{datasets:[{data:[],borderColor:'#2b6cb0',backgroundColor:'#2b6cb0',pointRadius:2,tension:.2}]},
-  options:{animation:false,parsing:false,plugins:{legend:{display:false}},
-    scales:{x:{type:'linear',title:{display:true,text:xl}},y:{title:{display:true,text:yl}}}}
-});
-const ch1 = mk('c1','t (s)','Suhu (°C)');
-const ch2 = mk('c2','Q (kal)','W (J)');
-
-// ---------- Render ----------
-function fmt(x,d=2){ return (x===null||x===undefined||!isFinite(x)) ? '-' : x.toFixed(d); }
-function render(){
-  $('pP').textContent = (cfg.V*cfg.V/cfg.R).toFixed(2);
-  if (!data.length || T0===null){
-    ['sT','sDT','sQ','sW','sJ','sJr','sErr'].forEach(i => $(i).textContent='-');
-    ch1.data.datasets[0].data=[]; ch2.data.datasets[0].data=[];
-    ch1.update(); ch2.update(); $('tb').innerHTML=''; return;
+function catatanMassaMl(n){ return `dihitung dari volume ${angka(n)} mL x ${String(RHO_AIR).replace(".", ",")} g/mL`; }
+function pm(x, u, satuan){
+  const sat = satuan ? " " + satuan : "";
+  if (u === null || u === undefined || u !== u || u <= 0) return angka(x) + sat;
+  const eksp = Math.floor(Math.log10(u));
+  const digit = Math.floor(u / Math.pow(10, eksp) + 1e-9);
+  const sig = digit === 1 ? 2 : 1;
+  const desimal = Math.max(0, sig - 1 - eksp);
+  return `${x.toFixed(desimal)} \u00b1 ${u.toFixed(desimal)}`.replace(/\./g, ",") + sat;
+}
+function fix(x, d = 2){ return x.toFixed(d).replace(/\./g, ","); }
+function fillText(text, width){
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines = []; let cur = "";
+  for (const w of words){
+    if (!cur) cur = w;
+    else if ((cur + " " + w).length <= width) cur += " " + w;
+    else { lines.push(cur); cur = w; }
   }
-  const rows = compute(), last = rows[rows.length-1], slope = regress(rows);
-  $('sT').textContent = fmt(last.t,0)+' s';
-  $('sDT').textContent = fmt(last.dT)+' °C';
-  $('sQ').textContent = fmt(last.Q);
-  $('sW').textContent = fmt(last.W);
-  $('sJ').textContent = fmt(last.J,3);
-  $('sJr').textContent = fmt(slope,3);
-  const ref = slope ?? last.J;
-  $('sErr').textContent = ref ? fmt(Math.abs(ref-J_TEORI)/J_TEORI*100,1)+' %' : '-';
-
-  ch1.data.datasets[0].data = rows.map(r => ({x:r.t,y:r.T}));
-  ch2.data.datasets[0].data = rows.filter(r=>r.Q>0).map(r => ({x:r.Q,y:r.W}));
-  ch1.update(); ch2.update();
-
-  const tail = rows.slice(-150).reverse();
-  $('tb').innerHTML = tail.map(r =>
-    `<tr><td>${fmt(r.t,0)}</td><td>${fmt(r.T)}</td><td>${fmt(r.dT)}</td><td>${fmt(r.Q)}</td><td>${fmt(r.W)}</td><td>${fmt(r.J,3)}</td></tr>`
-  ).join('');
+  if (cur) lines.push(cur);
+  return lines.join("\n");
+}
+function bungkusBaris(teks, lebar = 92){
+  const out = [];
+  for (const baris of teks.split("\n")){
+    if (baris.length <= lebar){ out.push(baris); continue; }
+    const indent = baris.match(/^\s*/)[0];
+    const words = baris.trim().split(/\s+/);
+    let cur = indent;
+    for (const w of words){
+      if (cur.trim() === "") cur += w;
+      else if ((cur + " " + w).length <= lebar) cur += " " + w;
+      else { out.push(cur); cur = indent + w; }
+    }
+    out.push(cur);
+  }
+  return out.join("\n");
 }
 
-// ---------- MQTT ----------
-function setBadge(el, text, cls){ el.textContent=text; el.className='badge '+(cls||''); }
-function connect(){
-  if (client){ try{ client.end(true); }catch(e){} }
-  setBadge($('bBroker'),'Server: menghubungkan...','');
-  client = mqtt.connect(BROKER, {clientId:'web-'+Math.random().toString(16).slice(2,10), reconnectPeriod:3000, connectTimeout:8000});
-  client.on('connect', () => {
-    setBadge($('bBroker'),'Server: terhubung','ok');
-    client.subscribe([cfg.topic+'/data', cfg.topic+'/status']);
-  });
-  client.on('close', () => setBadge($('bBroker'),'Server: terputus','bad'));
-  client.on('error', () => setBadge($('bBroker'),'Server: error','bad'));
-  client.on('message', (topic, payload) => {
-    const s = payload.toString();
-    if (topic.endsWith('/status')){
-      deviceOnline = (s==='online');
-      setBadge($('bDevice'), deviceOnline ? 'Alat: online' : 'Alat: offline', deviceOnline ? 'ok':'bad');
-      return;
-    }
-    let m; try { m = JSON.parse(s); } catch(e){ return; }
-    lastMsg = Date.now();
-    if (m.err){ $('err').textContent = 'Sensor DS18B20 tidak terdeteksi, periksa kabel.'; return; }
-    $('err').textContent = '';
-    $('tNow').textContent = Number(m.T).toFixed(2);
-    $('tInfo').textContent = 'Diperbarui ' + new Date().toLocaleTimeString('id-ID');
-    if (m.run === 1){
-      if (prevRun !== 1){ data = []; }
-      T0 = m.T0;
-      if (!data.length || m.t > data[data.length-1].t) data.push({t:m.t, T:m.T});
-      setBadge($('bRun'),'Status: mengukur ('+Math.round(m.t)+(cfg.dur?' / '+cfg.dur:'')+' s)','ok');
-      render();
+/* ====================================================================
+   FUNGSI FISIKA (sama dengan calculate_joule_result di SUHU8.py)
+   ==================================================================== */
+function calculateJoule(V, P, m, c, waktu, suhu, R){
+  if (waktu.length < 2) throw new Error("Data terlalu sedikit (minimal 2 titik data suhu).");
+  if ([V, P, m, c].some(v => v === null || v === undefined)) throw new Error("Parameter eksperimen (V, P, m, c) belum lengkap.");
+  if (V === 0) throw new Error("Tegangan (V) tidak boleh nol.");
+  const T0 = suhu[0], T1 = suhu[suhu.length - 1], dT = T1 - T0;
+  const t = waktu[waktu.length - 1] - waktu[0];
+  if (t <= 0) throw new Error("Rentang waktu data nol atau negatif - periksa kolom waktu.");
+  const I = P / V;
+  const W = V * I * t;
+  const W_alt = P * t;
+  if (dT === 0) throw new Error("Perubahan suhu (delta T) nol - konstanta Joule tidak dapat dihitung dari data ini.");
+  const Q = m * c * dT;
+  if (Q === 0) throw new Error("Kalor (Q) bernilai nol - periksa kembali massa/kalor jenis/perubahan suhu.");
+  const J = W / Q;
+  const Q_J = Q * J_REFERENSI;
+  const P_eff = Q_J / t;
+  const P_hilang = P - P_eff;
+  const eta = P ? P_eff / P * 100 : NaN;
+  const u_T = SENSOR_U, u_dT = u_T + u_T, rel_dT = u_dT / Math.abs(dT);
+  const u_Q = Math.abs(Q) * rel_dT, u_J = Math.abs(J) * rel_dT, u_Peff = Math.abs(P_eff) * rel_dT;
+  const u_eta = eta === eta ? Math.abs(eta) * rel_dT : NaN;
+  return {V, P, m, c, R: R ?? null, I, t, T0, T1, dT, W, W_alt, Q, J, Q_J, P_eff, P_hilang, eta,
+          u_T, u_dT, rel_dT, u_Q, u_J, u_Peff, u_eta};
+}
+
+/* ====================================================================
+   TEKS HASIL (Parameter, Perhitungan, Materi)
+   ==================================================================== */
+function buatTeksParam(h){
+  let s = `PARAMETER EKSPERIMEN\n${"=".repeat(40)}\n\n`;
+  s += `Tegangan (V)            : ${angka(h.V)} Volt`
+     + (h.V_akhir != null ? `  (rata-rata awal ${angka(h.V_awal)} dan akhir ${angka(h.V_akhir)})` : "") + "\n";
+  if (h.R) s += `Hambatan elemen (R)     : ${angka(h.R)} Ω`;
+  if (h.R_akhir != null) s += `  (rata-rata awal ${angka(h.R_awal)} dan akhir ${angka(h.R_akhir)})`;
+  if (h.R) s += "\n";
+  s += `Daya listrik (P)        : ${angka(h.P)} Watt` + (h.R ? "  (P = V²/R)" : "") + "\n"
+     + `Arus (I)                : ${angka(h.I)} A\n`
+     + `Massa air (m)           : ${angka(h.m)} gram` + (h.catatan_massa ? `  (${h.catatan_massa})` : "") + "\n"
+     + `Kalor jenis air (c)     : ${angka(h.c)} kal/g°C\n`
+     + `Waktu eksperimen (t)    : ${fix(h.t)} s\n`
+     + `Suhu awal T0            : ${fix(h.T0)} °C\n`
+     + `Suhu akhir T1           : ${fix(h.T1)} °C\n`
+     + `Perubahan suhu (ΔT)     : ${fix(h.dT)} °C\n`
+     + `Sensor suhu             : ${SENSOR_NAMA} (${SENSOR_PRODUSEN})\n`
+     + `Ketidakpastian sensor   : ± ${fix(SENSOR_U, 1)} °C (rentang ${SENSOR_RENTANG})\n`;
+  return s;
+}
+
+function buatTeksCalc(h){
+  let s = `LANGKAH PERHITUNGAN\n${"=".repeat(40)}\n\n`;
+  if (h.R){
+    s += `1) Daya dan arus listrik (dari V dan R yang diukur):\n`
+       + `   P = V² / R\n`
+       + `   P = ${angka(h.V)}² / ${angka(h.R)}\n`
+       + `   P = ${angka(h.P)} W\n`
+       + `   I = V / R = ${angka(h.V)} / ${angka(h.R)} = ${angka(h.I)} A\n\n`;
+  } else {
+    s += `1) Arus listrik:\n   I = P / V\n   I = ${angka(h.P)} / ${angka(h.V)}\n   I = ${angka(h.I)} A\n\n`;
+  }
+  s += `2) Energi listrik (dari V, I, t):\n`
+     + `   W = V x I x t\n`
+     + `   W = ${angka(h.V)} x ${angka(h.I)} x ${fix(h.t)}\n`
+     + `   W = ${angka(h.W)} J\n\n`
+     + `   Cara alternatif (hasilnya harus sama):\n`
+     + `   W = P x t = ${angka(h.P)} x ${fix(h.t)} = ${angka(h.W_alt)} J\n\n`
+     + `3) Perubahan suhu:\n`
+     + `   ΔT = T1 - T0\n`
+     + `   ΔT = ${fix(h.T1)} - ${fix(h.T0)}\n`
+     + `   ΔT = ${fix(h.dT)} °C\n\n`
+     + `4) Kalor yang diserap air:\n`
+     + `   Q = m x c x ΔT\n`
+     + `   Q = ${angka(h.m)} x ${angka(h.c)} x ${fix(h.dT)}\n`
+     + `   Q = ${angka(h.Q)} kal\n\n`
+     + `5) Tetapan Joule:\n`
+     + `   J = W / Q\n`
+     + `   J = ${angka(h.W)} / ${angka(h.Q)}\n`
+     + `   J = ${angka(h.J)} J/kal\n\n`
+     + `6) Daya efektif (daya yang benar-benar diserap air):\n`
+     + `   Q dalam Joule = Q x ${angka(J_REFERENSI)} J/kal\n`
+     + `   Q = ${angka(h.Q)} x ${angka(J_REFERENSI)} = ${angka(h.Q_J)} J\n`
+     + `   P efektif = Q / t\n`
+     + `   P efektif = ${angka(h.Q_J)} / ${fix(h.t)}\n`
+     + `   P efektif = ${angka(h.P_eff)} W\n\n`
+     + `7) Perbandingan daya listrik dan daya efektif:\n`
+     + `   Daya listrik (P)        = ${angka(h.P)} W\n`
+     + `   Daya efektif            = ${angka(h.P_eff)} W\n`
+     + `   Daya hilang             = P - P efektif = ${angka(h.P_hilang)} W\n`
+     + `   Efisiensi (η)           = P efektif / P x 100%\n`
+     + `   Efisiensi (η)           = ${angka(h.P_eff)} / ${angka(h.P)} x 100% = ${fix(h.eta, 1)}%\n\n`
+     + `8) Ketidakpastian absolut (sumber: sensor suhu ${SENSOR_NAMA}, ± ${fix(SENSOR_U, 1)} °C):\n`
+     + `   Δ(T0) = Δ(T1) = ± ${fix(h.u_T, 1)} °C\n`
+     + `   Δ(ΔT) = Δ(T1) + Δ(T0) = ${fix(h.u_T, 1)} + ${fix(h.u_T, 1)} = ± ${fix(h.u_dT, 1)} °C\n`
+     + `   Ketidakpastian relatif = Δ(ΔT) / ΔT = ${fix(h.u_dT, 1)} / ${fix(h.dT)} = ${fix(h.rel_dT * 100)}%\n\n`
+     + `   ΔT        = (${pm(h.dT, h.u_dT)}) °C\n`
+     + `   Δ(Q)      = m x c x Δ(ΔT) = ${angka(h.m)} x ${angka(h.c)} x ${fix(h.u_dT, 1)} = ± ${angka(h.u_Q)} kal\n`
+     + `   Q         = (${pm(h.Q, h.u_Q)}) kal\n`
+     + `   Δ(J)      = J x Δ(Q) / Q = ${angka(h.J)} x ${angka(h.u_Q)} / ${angka(h.Q)} = ± ${angka(h.u_J)} J/kal\n`
+     + `   J         = (${pm(h.J, h.u_J)}) J/kal\n`
+     + `   P efektif = (${pm(h.P_eff, h.u_Peff)}) W\n`
+     + `   η         = (${pm(h.eta, h.u_eta)}) %\n\n`
+     + `   Catatan: V, P, m, c, dan t dianggap tepat; hanya ketidakpastian\n`
+     + `   sensor suhu yang diperhitungkan (metode penjumlahan / kasus terburuk).\n`;
+  return s;
+}
+
+function buatTeksMateri(h){
+  const J_teori = 4.184, J_hasil = h.J;
+  const selisih = (J_hasil - J_teori) / J_teori * 100;
+  const error_persen = Math.abs(selisih);
+  let kes;
+  if (error_persen <= 10) kes = "sangat mendekati nilai referensi (baik untuk skala eksperimen laboratorium dasar).";
+  else if (error_persen <= 25) kes = "cukup mendekati nilai referensi, dengan penyimpangan yang masih dapat diterima.";
+  else if (J_hasil > J_teori) kes = "lebih besar dari nilai referensi: energi listrik yang dihitung lebih besar daripada kalor yang benar-benar diserap air, sehingga kemungkinan ada kalor yang hilang (ke lingkungan/wadah/elemen pemanas) atau daya pemanas sebenarnya lebih kecil dari daya yang tertera.";
+  else kes = "lebih kecil dari nilai referensi: kalor yang diserap air terhitung lebih besar daripada energi listrik yang dihitung, sehingga kemungkinan daya sebenarnya lebih besar dari daya yang diinput, massa air kurang tepat, atau ada pemanasan tambahan dari luar.";
+  const paragraf = fillText("Hasil percobaan " + kes, 70);
+
+  const J_bawah = J_hasil - h.u_J, J_atas = J_hasil + h.u_J;
+  let ket;
+  if (J_bawah <= J_teori && J_teori <= J_atas)
+    ket = "Nilai referensi berada di dalam rentang J ± Δ(J), sehingga hasil konsisten dengan nilai referensi dalam batas ketidakpastian sensor.";
+  else
+    ket = "Nilai referensi berada di luar rentang J ± Δ(J), sehingga selisih terhadap nilai referensi tidak dapat dijelaskan oleh ketidakpastian sensor suhu saja. Kemungkinan besar ada galat sistematik, misalnya kalor yang hilang ke lingkungan/wadah atau daya yang tidak tepat.";
+  ket = fillText(ket, 70);
+
+  const ketBlok =
+    `KETIDAKPASTIAN PENGUKURAN\n${"-".repeat(50)}\n`
+  + `Sensor suhu : ${SENSOR_NAMA} (${SENSOR_PRODUSEN})\n`
+  + `Akurasi     : ± ${fix(SENSOR_U, 1)} °C pada rentang ${SENSOR_RENTANG}\n\n`
+  + `  - ΔT        = (${pm(h.dT, h.u_dT)}) °C\n`
+  + `  - Q         = (${pm(h.Q, h.u_Q)}) kal\n`
+  + `  - J         = (${pm(J_hasil, h.u_J)}) J/kal\n`
+  + `  - P efektif = (${pm(h.P_eff, h.u_Peff)}) W\n`
+  + `  - η         = (${pm(h.eta, h.u_eta)}) %\n`
+  + `  - Ketidakpastian relatif ΔT = ${fix(h.rel_dT * 100)}%\n\n`
+  + `${ket}\n\n`;
+
+  let cat =
+    `\nPERBANDINGAN DAYA\n${"-".repeat(50)}\n`
+  + `  - Daya listrik (P)      = ${angka(h.P)} W\n`
+  + `  - Daya efektif          = ${angka(h.P_eff)} W (diserap air)\n`
+  + `  - Daya hilang           = ${angka(h.P_hilang)} W\n`
+  + `  - Efisiensi (η)         = ${fix(h.eta, 1)}%\n`;
+  if (h.eta > 100)
+    cat += "  Efisiensi di atas 100% tidak mungkin secara fisika: daya listrik yang\n  diinput kemungkinan lebih kecil dari daya sebenarnya, atau massa air/\n  suhu kurang tepat.\n";
+  else
+    cat += "  Daya efektif selalu lebih kecil dari daya listrik karena sebagian\n  kalor hilang ke pelat, panci, dan udara sekitar.\n";
+
+  return `MATERI: ENERGI LISTRIK BERUBAH MENJADI KALOR\n${"=".repeat(50)}\n\n`
+  + `Berdasarkan Hukum Kekekalan Energi, energi listrik yang dihasilkan\n`
+  + `oleh sumber tegangan diubah menjadi energi kalor (panas) pada elemen\n`
+  + `pemanas, yang kemudian diserap oleh air.\n\n`
+  + `Energi listrik dirumuskan sebagai:\n    W = V x I x t     atau     W = P x t\n\n`
+  + `Kalor yang diserap air dirumuskan sebagai:\n    Q = m x c x ΔT\n\n`
+  + `Karena satuan energi listrik (Joule) berbeda dengan satuan kalor\n`
+  + `(kalori), diperlukan sebuah tetapan konversi yang disebut Tetapan\nJoule (J):\n    J = W / Q\n\n`
+  + `Secara teori, nilai referensi tetapan Joule adalah sekitar\n`
+  + `${angka(J_teori)} J/kal (sering dibulatkan menjadi 4,2 J/kal).\n\n`
+  + `INTERPRETASI HASIL PERCOBAAN\n${"-".repeat(50)}\n`
+  + `Dari hasil percobaan diperoleh:\n`
+  + `  - Energi listrik (W)    = ${angka(h.W)} J\n`
+  + `  - Kalor diserap air (Q) = ${angka(h.Q)} kal\n`
+  + `  - Tetapan Joule hasil   = ${angka(J_hasil)} J/kal\n`
+  + `  - Nilai referensi       = ${angka(J_teori)} J/kal\n`
+  + `  - Selisih (error)       = ${fix(error_persen)}%\n`
+  + `${cat}\n${paragraf}\n\n${ketBlok}`
+  + `Beberapa faktor yang dapat menyebabkan tetapan Joule hasil percobaan\nberbeda dari nilai referensi antara lain:\n`
+  + `  1. Sebagian kalor hilang ke lingkungan (radiasi & konveksi dari\n     wadah) sehingga tidak seluruhnya diserap air.\n`
+  + `  2. Sebagian kalor digunakan untuk memanaskan wadah/elemen pemanas\n     itu sendiri, bukan hanya air.\n`
+  + `  3. Daya pemanas sebenarnya bisa berbeda dari daya yang tertera\n     (efisiensi elemen tidak 100%, tegangan jala-jala naik-turun).\n`
+  + `  4. Ketidaktepatan pengukuran tegangan (V), daya (P), massa (m),\n     atau suhu (T0, T1).\n\n`
+  + `Semakin kecil selisih (error) terhadap nilai referensi, semakin baik\nkualitas eksperimen yang dilakukan.\n`;
+}
+
+/* ====================================================================
+   DIALOG (pengganti messagebox)
+   ==================================================================== */
+function modal(title, msg, opts = {}){
+  return new Promise(res => {
+    const ov = document.createElement("div");
+    ov.className = "ov";
+    ov.innerHTML = `<div class="dlg"><div class="dt"></div><div class="dm"></div><div class="db"></div></div>`;
+    ov.querySelector(".dt").textContent = title;
+    ov.querySelector(".dm").textContent = msg;
+    const db = ov.querySelector(".db");
+    const close = v => { ov.remove(); res(v); };
+    if (opts.confirm){
+      const no = document.createElement("button"); no.className = "btn purple"; no.textContent = "Tidak"; no.onclick = () => close(false);
+      const yes = document.createElement("button"); yes.className = "btn blue"; yes.textContent = "Ya"; yes.onclick = () => close(true);
+      db.append(no, yes);
     } else {
-      setBadge($('bRun'),'Status: idle','');
+      const ok = document.createElement("button"); ok.className = "btn blue"; ok.textContent = "OK"; ok.onclick = () => close(true);
+      db.append(ok);
     }
-    prevRun = m.run;
+    $("modalRoot").appendChild(ov);
   });
 }
-function send(cmd){
-  if (!client || !client.connected){ $('err').textContent='Belum terhubung ke server.'; return; }
-  client.publish(cfg.topic+'/cmd', cmd);
+
+/* ====================================================================
+   NAVIGASI HALAMAN
+   ==================================================================== */
+let chartRT = null, chartRes = null;
+function showPage(name){
+  ["pgMenu","pgReal","pgRes"].forEach(id => $(id).classList.add("hidden"));
+  $({menu:"pgMenu", real:"pgReal", res:"pgRes"}[name]).classList.remove("hidden");
+  window.scrollTo(0, 0);
+  setTimeout(() => { if (name === "real" && chartRT) chartRT.resize(); if (name === "res" && chartRes) chartRes.resize(); }, 60);
 }
 
-$('btnStart').onclick = () => send('START:' + (cfg.dur || 0));
-$('btnStop').onclick  = () => send('STOP');
-$('btnReset').onclick = () => { data=[]; T0=null; render(); };
-$('btnCsv').onclick = () => {
-  if (!data.length) return;
-  const rows = compute();
-  let csv = 'time_s,temperature_C,deltaT_C,Q_kal,W_J,J_J_per_kal\n';
-  rows.forEach(r => csv += [r.t,r.T,r.dT.toFixed(3),r.Q.toFixed(3),r.W.toFixed(3),r.J===null?'':r.J.toFixed(4)].join(',')+'\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download = 'joule_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
-  a.click();
+/* ====================================================================
+   GRAFIK
+   ==================================================================== */
+const bgPlugin = {id:"bg", beforeDraw(ch){ const {ctx} = ch; ctx.save(); ctx.globalCompositeOperation = "destination-over"; ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, ch.width, ch.height); ctx.restore(); }};
+const gridOpt = {color:"rgba(0,0,0,.13)", borderDash:[4,4]};
+
+function minMax(arr){ let a = Infinity, b = -Infinity; for (const v of arr){ if (v < a) a = v; if (v > b) b = v; } return [a, b]; }
+
+function graphConfig(waktu, suhu, o = {}){
+  const fs = o.font || 12;
+  const pts = waktu.map((w, i) => ({x:w, y:suhu[i]}));
+  const lo = pts.map(p => ({x:p.x, y:p.y - SENSOR_U}));
+  const up = pts.map(p => ({x:p.x, y:p.y + SENSOR_U}));
+  const [mn, mx] = waktu.length ? minMax(waktu) : [0, 1];
+  return {
+    type:"line",
+    data:{datasets:[
+      {label:"Suhu terukur", data:pts, borderColor:C.RED, backgroundColor:C.RED, pointRadius:o.pr ?? 3, borderWidth:o.bw ?? 1.6, tension:0, order:1},
+      {label:"_lo", data:lo, borderColor:"transparent", pointRadius:0, borderWidth:0, fill:false, order:3},
+      {label:`Ketidakpastian ± ${fix(SENSOR_U, 1)} °C (${SENSOR_NAMA})`, data:up, borderColor:"transparent", backgroundColor:"rgba(248,113,113,0.2)", pointRadius:0, borderWidth:0, fill:"-1", order:2},
+      {label:"_0", data:[{x:mn, y:0}, {x:mx, y:0}], borderColor:"#9CA3AF", borderDash:[3,4], borderWidth:1, pointRadius:0, fill:false, order:4}
+    ]},
+    options:{
+      responsive:!o.fixed, maintainAspectRatio:false, animation:false, devicePixelRatio:o.dpr, font:{size:fs},
+      plugins:{
+        legend:{position:"top", align:"start", labels:{filter:it => !it.text.startsWith("_"), font:{size:fs * 0.85}}},
+        title:{display:true, text:"Suhu terhadap Waktu (Pemanasan Air)", color:C.BLUE_DARK, font:{size:fs * 1.1}}
+      },
+      scales:{
+        x:{type:"linear", title:{display:true, text:"Waktu (s)"}, grid:gridOpt},
+        y:{title:{display:true, text:"Suhu (°C)"}, grace:"15%", grid:gridOpt}
+      }
+    },
+    plugins:[bgPlugin]
+  };
+}
+
+function initRTChart(){
+  chartRT = new Chart($("cvRT"), {
+    type:"line",
+    data:{datasets:[
+      {label:"Suhu", data:[], borderColor:C.RED, backgroundColor:C.RED, pointRadius:3, borderWidth:1.8, tension:0},
+      {label:"_0", data:[], borderColor:"#9CA3AF", borderDash:[3,4], borderWidth:1, pointRadius:0}
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{legend:{display:false}, title:{display:true, text:"Suhu terhadap Waktu", color:C.BLUE_DARK, font:{size:14}}},
+      scales:{x:{type:"linear", title:{display:true, text:"Waktu (s)"}, grid:gridOpt}, y:{title:{display:true, text:"Suhu (°C)"}, grace:"15%", grid:gridOpt}}
+    }
+  });
+}
+function refreshRT(){
+  const pts = S.waktu.map((w, i) => ({x:w, y:S.suhu[i]}));
+  chartRT.data.datasets[0].data = pts;
+  if (pts.length){ const [a, b] = minMax(S.waktu); chartRT.data.datasets[1].data = [{x:a, y:0}, {x:b, y:0}]; }
+  else chartRT.data.datasets[1].data = [];
+  chartRT.update("none");
+}
+
+/* ====================================================================
+   FITUR 1: REALTIME (ESP32 lewat MQTT)
+   ==================================================================== */
+const S = {client:null, serverOk:false, device:null, running:false, starting:false, startedHere:false,
+           waktu:[], suhu:[], T0:null, prevRun:0, lastMsg:0, dur:0, startTimer:null, topic:DEFAULT_TOPIC};
+try { const t = localStorage.getItem("jouleTopic2"); if (t) S.topic = t; } catch(e){}
+
+function saveParams(){
+  try { localStorage.setItem("jouleParams2", JSON.stringify({V:$("rV").value, R:$("rR").value, m:$("rM").value, mu:$("rMu").value, c:$("rC").value, dur:$("rDur").value})); } catch(e){}
+}
+function loadParams(){
+  try {
+    const p = JSON.parse(localStorage.getItem("jouleParams2") || "{}");
+    if (p.V) $("rV").value = p.V; if (p.R) $("rR").value = p.R; if (p.m) $("rM").value = p.m;
+    if (p.mu) $("rMu").value = p.mu; if (p.c) $("rC").value = p.c; if (p.dur) $("rDur").value = p.dur;
+  } catch(e){}
+}
+function updateArus(){
+  try {
+    const V = keFloat($("rV").value), R = keFloat($("rR").value);
+    const P = dayaDariVR(V, R), I = V / R;
+    $("arusLbl").textContent = `Daya P = V²/R  :  ${angka(P)} W     Arus I = V/R  :  ${I.toFixed(4)} A`;
+  } catch(e){ $("arusLbl").textContent = "Daya P = V²/R  :  -- W     Arus I = V/R  :  -- A"; }
+}
+["rV","rR","rM","rC","rDur"].forEach(id => $(id).addEventListener("input", () => { updateArus(); saveParams(); }));
+$("rMu").addEventListener("change", saveParams);
+
+function setConnUI(){
+  const el = $("connLbl");
+  if (!S.serverOk){ el.textContent = "● Server belum terhubung"; el.style.color = "var(--red)"; $("btnConn").textContent = (S.client ? "Menghubungkan..." : "Hubungkan"); $("btnConn").className = "btn blue wide"; }
+  else if (S.device === true){ el.textContent = "● ESP32 terhubung dan online"; el.style.color = "var(--green)"; $("btnConn").textContent = "Putuskan"; $("btnConn").className = "btn red wide"; }
+  else { el.textContent = "● Server terhubung, menunggu ESP32..."; el.style.color = "var(--yellow)"; $("btnConn").textContent = "Putuskan"; $("btnConn").className = "btn red wide"; }
+  $("btnStart").disabled = !(S.serverOk && S.device === true) || S.running || S.starting;
+}
+
+function connectMQTT(){
+  if (S.client){ try { S.client.end(true); } catch(e){} }
+  S.serverOk = false; S.device = null;
+  S.client = mqtt.connect(BROKER, {clientId:"web-" + Math.random().toString(16).slice(2, 10), reconnectPeriod:3000, connectTimeout:8000});
+  setConnUI();
+  S.client.on("connect", () => { S.serverOk = true; S.client.subscribe([S.topic + "/data", S.topic + "/status"]); setConnUI(); });
+  S.client.on("close", () => { S.serverOk = false; S.device = null; setConnUI(); });
+  S.client.on("error", () => { S.serverOk = false; setConnUI(); });
+  S.client.on("message", (topic, payload) => {
+    const s = payload.toString();
+    if (topic.endsWith("/status")){ S.device = (s === "online"); setConnUI(); return; }
+    let m; try { m = JSON.parse(s); } catch(e){ return; }
+    onData(m);
+  });
+}
+function disconnectMQTT(){
+  if (S.client){ try { S.client.end(true); } catch(e){} }
+  S.client = null; S.serverOk = false; S.device = null; setConnUI();
+}
+$("btnConn").onclick = () => { (S.client && S.serverOk) ? disconnectMQTT() : connectMQTT(); };
+$("topicIn").value = S.topic;
+$("topicSave").onclick = () => {
+  const t = $("topicIn").value.trim(); if (!t) return;
+  S.topic = t; try { localStorage.setItem("jouleTopic2", t); } catch(e){}
+  connectMQTT();
 };
 
-// Tandai alat tidak aktif kalau lama tidak ada data
-setInterval(() => {
-  if (lastMsg && Date.now()-lastMsg > 6000){
-    $('tInfo').textContent = 'Tidak ada data baru. Cek alat/WiFi ESP32.';
+function setWarn(t){ $("warnLbl").textContent = t; }
+function clearRTData(){
+  S.waktu = []; S.suhu = []; S.T0 = null;
+  $("rtTb").innerHTML = "";
+  $("stT0").textContent = "Suhu awal T0       : -- °C (belum terkunci)";
+  $("stT1").textContent = "Suhu akhir sementara: -- °C";
+  $("stDT").textContent = "ΔT sementara       : -- °C";
+  $("stN").textContent = "Jumlah Data        : 0";
+  refreshRT();
+}
+function setMeasuringUI(on){
+  $("stMeasure").textContent = on ? "● Pengukuran Berjalan" : "● Standby";
+  $("stMeasure").style.color = on ? "var(--green)" : "var(--yellow)";
+  $("btnStart").textContent = on ? "Berjalan..." : "▶ MULAI";
+  $("rDur").disabled = on;
+  setConnUI();
+}
+function appendPoint(t, T){
+  if (S.waktu.length && t <= S.waktu[S.waktu.length - 1]) return;
+  if (S.T0 === null){ S.T0 = T; $("stT0").textContent = `Suhu awal T0       : ${T.toFixed(2)} °C (terkunci)`; }
+  S.waktu.push(t); S.suhu.push(T);
+  $("stWaktu").textContent = `Waktu berjalan     : ${t.toFixed(2)} s`;
+  $("stSuhu").textContent = `Suhu saat ini      : ${T.toFixed(2)} °C`;
+  $("stT1").textContent = `Suhu akhir sementara: ${T.toFixed(2)} °C`;
+  $("stDT").textContent = `ΔT sementara       : ${(T - S.T0).toFixed(2)} °C`;
+  $("stN").textContent = `Jumlah Data        : ${S.waktu.length}`;
+  const tb = $("rtTb");
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td>${S.waktu.length}</td><td>${t.toFixed(2)}</td><td>${T.toFixed(2)}</td>`;
+  tb.appendChild(tr);
+  while (tb.children.length > MAX_ROWS_TABLE) tb.removeChild(tb.firstChild);
+  $("rtTblWrap").scrollTop = $("rtTblWrap").scrollHeight;
+  refreshRT();
+  if (S.dur > 0) $("timerLbl").textContent = `⏱ Sisa waktu: ${Math.max(0, S.dur - t).toFixed(0)} s / ${S.dur.toFixed(0)} s`;
+  else $("timerLbl").textContent = "⏱ Mode manual — klik 'Selesai' kapan saja";
+}
+
+function onData(m){
+  if (m.err){
+    setWarn("⚠ ERROR: Sensor DS18B20 tidak terdeteksi! Periksa kabel.");
+    if (S.starting){ S.starting = false; clearTimeout(S.startTimer); setMeasuringUI(false); }
+    return;
   }
+  S.lastMsg = Date.now(); setWarn("");
+  if (m.run === 1){
+    if (S.prevRun !== 1){
+      clearRTData(); S.running = true; S.starting = false; clearTimeout(S.startTimer);
+      setMeasuringUI(true);
+    }
+    appendPoint(Number(m.t), Number(m.T));
+  } else {
+    $("stSuhu").textContent = `Suhu saat ini      : ${Number(m.T).toFixed(2)} °C`;
+    if (S.prevRun === 1 && S.running){
+      S.running = false; setMeasuringUI(false);
+      if (S.startedHere){
+        S.startedHere = false;
+        if (S.dur > 0){ $("timerLbl").textContent = "⏱ Waktu selesai — mengakhiri otomatis..."; finishAnalysis(true); }
+      }
+    }
+  }
+  S.prevRun = m.run;
+}
+setInterval(() => {
+  if (S.device === true && S.lastMsg && Date.now() - S.lastMsg > 6000) setWarn("⚠ Tidak ada data baru dari ESP32. Cek WiFi/alat.");
 }, 2000);
 
-loadInputs(); render(); connect();
+$("btnStart").onclick = async () => {
+  if (!(S.serverOk && S.device === true)) return;
+  let dur = 0;
+  const ds = $("rDur").value.trim();
+  if (ds){
+    try { dur = keFloat(ds); if (dur <= 0) throw 0; dur = Math.round(dur); }
+    catch(e){ dur = 0; await modal("Durasi tidak valid", "Durasi harus angka detik positif. Melanjutkan mode manual."); }
+  }
+  S.dur = dur; S.startedHere = true; S.starting = true; S.prevRun = 0;
+  clearRTData();
+  S.client.publish(S.topic + "/cmd", "START:" + dur);
+  $("btnStart").disabled = true; $("btnStart").textContent = "Memulai...";
+  $("timerLbl").textContent = dur ? "⏱ Menunggu ESP32 mulai..." : "⏱ Mode manual — klik 'Selesai' kapan saja";
+  clearTimeout(S.startTimer);
+  S.startTimer = setTimeout(() => {
+    if (S.starting){ S.starting = false; S.startedHere = false; setMeasuringUI(false); setWarn("⚠ ESP32 belum merespons START. Coba lagi."); }
+  }, 7000);
+};
+$("btnReset").onclick = async () => {
+  if (!await modal("Konfirmasi Reset", "Menghapus data di tampilan GUI (TIDAK menghentikan ESP32). Lanjutkan?", {confirm:true})) return;
+  clearRTData();
+  $("stWaktu").textContent = "Waktu berjalan     : -- s";
+  $("stSuhu").textContent = "Suhu saat ini      : -- °C";
+};
+$("btnFinish").onclick = () => finishAnalysis(false);
+$("rtBack").onclick = () => showPage("menu");
+
+function getParams(){
+  let V, R, mIn, c;
+  try { V = keFloat($("rV").value); R = keFloat($("rR").value); mIn = keFloat($("rM").value); c = keFloat($("rC").value); }
+  catch(e){ throw new Error("Parameter belum lengkap. Isi Tegangan (V), Hambatan (R), Massa (m), dan Kalor jenis (c) dengan angka."); }
+  const P = dayaDariVR(V, R);
+  const sat = $("rMu").value;
+  const m = massaKeGram(mIn, sat);
+  return {V, R, P, m, c, catatan: sat === "ml" ? catatanMassaMl(mIn) : ""};
+}
+
+async function finishAnalysis(auto){
+  if (S.waktu.length < 2){ await modal("Data belum cukup", "Kumpulkan minimal 2 titik data sebelum melihat analisis."); return; }
+  let p;
+  try { p = getParams(); } catch(e){ await modal("Parameter belum lengkap", e.message); return; }
+  if (S.running && S.client){ S.client.publish(S.topic + "/cmd", "STOP"); }
+  S.running = false; S.startedHere = false; S.starting = false; clearTimeout(S.startTimer);
+  setMeasuringUI(false);
+  const info = {sumber:"Realtime dari ESP32 (Fitur 1)", nama_file:"-", jumlah_data:S.waktu.length, catatan_massa:p.catatan};
+  loadResult([...S.waktu], [...S.suhu], info, {V:p.V, R:p.R, m:p.m, c:p.c});
+  showPage("res");
+}
+
+/* ====================================================================
+   FITUR 2: UPLOAD CSV / EXCEL
+   ==================================================================== */
+const ALIAS_WAKTU = new Set(["time_s","time","waktu","waktu_s","waktu(s)","t","t(s)","times","detik"]);
+const ALIAS_SUHU = new Set(["temperature_c","temperature","temp","temp_c","suhu","suhu(c)","suhu(°c)","suhu_c","t(c)","t(°c)","temperatur","suhu(celsius)"]);
+const normKol = n => String(n).trim().toLowerCase().replace(/ /g, "");
+function keAngka(v){
+  if (typeof v === "number") return v;
+  if (v === null || v === undefined) return NaN;
+  const s = String(v).trim().replace(/,/g, ".");
+  if (s === "") return NaN;
+  const n = Number(s); return isFinite(n) ? n : NaN;
+}
+function parseCSV(text, sep){
+  const rows = []; let row = [], cur = "", q = false;
+  for (let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if (q){ if (ch === '"'){ if (text[i + 1] === '"'){ cur += '"'; i++; } else q = false; } else cur += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === sep){ row.push(cur); cur = ""; }
+    else if (ch === "\n"){ row.push(cur); rows.push(row); row = []; cur = ""; }
+    else if (ch === "\r"){ /* abaikan */ }
+    else cur += ch;
+  }
+  if (cur !== "" || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r => !(r.length === 1 && r[0].trim() === ""));
+}
+async function bacaDataSuhu(file, minRows){
+  const ext = (file.name.match(/\.[^.]+$/) || [""])[0].toLowerCase();
+  let rows;
+  if ([".xlsx", ".xlsm", ".xls"].includes(ext)){
+    const wb = XLSX.read(await file.arrayBuffer(), {type:"array"});
+    const sheet = wb.SheetNames.find(n => n.toLowerCase().includes("data")) || wb.SheetNames[0];
+    rows = XLSX.utils.sheet_to_json(wb.Sheets[sheet], {header:1, raw:true, defval:null});
+  } else if ([".csv", ".txt"].includes(ext)){
+    const buf = await file.arrayBuffer();
+    let text; try { text = new TextDecoder("utf-8", {fatal:true}).decode(buf); } catch(e){ text = new TextDecoder("windows-1252").decode(buf); }
+    text = text.replace(/^\uFEFF/, "");
+    const header = text.split("\n")[0] || "";
+    const cnt = ch => header.split(ch).length - 1;
+    let sep = ";"; for (const ch of ["\t", ","]) if (cnt(ch) > cnt(sep)) sep = ch;
+    rows = parseCSV(text, sep);
+  } else throw new Error(`Format file '${ext}' tidak didukung. Gunakan .csv, .xlsx, .xlsm, atau .xls.`);
+
+  if (!rows.length) throw new Error("File kosong.");
+  const head = rows[0];
+  let kw = -1, ks = -1;
+  head.forEach((c, i) => {
+    const n = normKol(c);
+    if (kw < 0 && ALIAS_WAKTU.has(n)) kw = i;
+    else if (ks < 0 && ALIAS_SUHU.has(n)) ks = i;
+  });
+  if (kw < 0 || ks < 0)
+    throw new Error("Kolom tidak dikenali. Gunakan judul kolom 'time_s' & 'temperature_C' (atau 'Waktu (s)' & 'Suhu (°C)').\nKolom yang ditemukan: " + head.map(String).join(", "));
+  const waktu = [], suhu = [];
+  for (let i = 1; i < rows.length; i++){
+    const w = keAngka(rows[i][kw]), s = keAngka(rows[i][ks]);
+    if (isNaN(w) || isNaN(s)) continue;
+    waktu.push(w); suhu.push(s);
+  }
+  if (waktu.length < minRows) throw new Error(`Data terlalu sedikit (minimal ${minRows} baris angka yang valid).`);
+  return {waktu, suhu};
+}
+$("goUpload").onclick = () => { $("fileIn").value = ""; $("fileIn").click(); };
+$("fileIn").onchange = async () => {
+  const f = $("fileIn").files[0]; if (!f) return;
+  let d;
+  try { d = await bacaDataSuhu(f, 2); }
+  catch(e){ await modal("Gagal membaca file", "File tidak sesuai format.\nDetail: " + e.message); return; }
+  loadResult(d.waktu, d.suhu, {sumber:"Upload CSV/Excel (Fitur 2 - Energi Listrik → Kalor)", nama_file:f.name, jumlah_data:d.waktu.length}, null);
+  showPage("res");
+};
+$("goReal").onclick = () => showPage("real");
+
+/* ====================================================================
+   HALAMAN HASIL
+   ==================================================================== */
+const R_ = {waktu:[], suhu:[], info:{}, hasil:null, teksParam:"", teksCalc:"", teksMateri:""};
+
+const TABS = ["Grafik Suhu","Tabel Data","Parameter Eksperimen","Perhitungan","Ringkasan Hasil","Materi & Interpretasi"];
+function setTab(name){
+  document.querySelectorAll("#tabbar button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("active", p.dataset.tab === name));
+  if (name === "Grafik Suhu" && chartRes) setTimeout(() => chartRes.resize(), 30);
+}
+TABS.forEach(t => {
+  const b = document.createElement("button"); b.textContent = t; b.dataset.tab = t; b.onclick = () => setTab(t);
+  $("tabbar").appendChild(b);
+});
+$("resBack").onclick = () => showPage("menu");
+
+function loadResult(waktu, suhu, info, prefill){
+  R_.waktu = waktu; R_.suhu = suhu; R_.info = info; R_.hasil = null;
+  $("subtitle").textContent = `Sumber: ${info.sumber || "-"}   |   File: ${info.nama_file || "-"}   |   Jumlah data: ${info.jumlah_data ?? waktu.length}`;
+  ["pV","pR","pV2","pR2","pM","pC"].forEach(id => $(id).value = "");
+  $("pMu").value = "gram";
+  if (prefill){ $("pV").value = String(prefill.V); $("pR").value = String(prefill.R); $("pM").value = String(prefill.m); $("pC").value = String(prefill.c); }
+
+  $("resTb").innerHTML = waktu.map((w, i) => `<tr><td>${i + 1}</td><td>${w.toFixed(2)}</td><td>${suhu[i].toFixed(2)}</td></tr>`).join("");
+
+  if (chartRes) chartRes.destroy();
+  chartRes = new Chart($("cvRes"), graphConfig(waktu, suhu, {font:12}));
+
+  const ph = "Isi parameter (V, P, m, c) lalu klik 'Proses Analisis'.";
+  $("txtParam").textContent = ph; $("txtCalc").textContent = ph;
+  $("txtMateri").textContent = "Materi & interpretasi akan muncul di sini setelah data dianalisis.";
+  ["cW","cQ","cDT","cJ","cP","cPe","cEta"].forEach(id => $(id).textContent = "--");
+  $("btnZip").disabled = true;
+  if (prefill) prosesAnalisis(); else setTab("Grafik Suhu");
+}
+
+async function prosesAnalisis(){
+  if (!R_.waktu.length){ await modal("Belum ada data", "Belum ada data suhu untuk dianalisis."); return; }
+  let V, R, mIn, c, P;
+  try { V = keFloat($("pV").value); R = keFloat($("pR").value); mIn = keFloat($("pM").value); c = keFloat($("pC").value); P = dayaDariVR(V, R); }
+  catch(e){ await modal("Parameter belum lengkap", "Isi Tegangan (V), Hambatan (R), Massa (m), dan Kalor jenis (c) dengan angka terlebih dahulu."); return; }
+
+  const V_awal = V, R_awal = R;
+  let V_akhir = null, R_akhir = null;
+  try {
+    const tv = $("pV2").value.trim(), tr = $("pR2").value.trim();
+    V_akhir = tv ? keFloat(tv) : null;
+    R_akhir = tr ? keFloat(tr) : null;
+    if (V_akhir !== null) V = (V_awal + V_akhir) / 2;
+    if (R_akhir !== null) R = (R_awal + R_akhir) / 2;
+    P = dayaDariVR(V, R);
+  } catch(e){ await modal("Isian tidak valid", "V akhir dan R akhir harus berupa angka (R lebih besar dari nol), atau dikosongkan."); return; }
+
+  let m, catatan;
+  if ($("pMu").value === "ml"){ m = massaKeGram(mIn, "ml"); catatan = catatanMassaMl(mIn); }
+  else { m = mIn; catatan = (R_.info && R_.info.catatan_massa) || ""; }
+
+  let h;
+  try { h = calculateJoule(V, P, m, c, R_.waktu, R_.suhu, R); Object.assign(h, {V_awal, V_akhir, R_awal, R_akhir}); }
+  catch(e){ await modal("Gagal menganalisis", e.message); return; }
+  h.catatan_massa = catatan;
+  R_.hasil = h;
+
+  R_.teksParam = buatTeksParam(h);
+  R_.teksCalc = buatTeksCalc(h);
+  R_.teksMateri = buatTeksMateri(h);
+  $("txtParam").textContent = R_.teksParam;
+  $("txtCalc").textContent = R_.teksCalc;
+  $("txtMateri").textContent = R_.teksMateri;
+
+  $("cW").textContent = `${angka(h.W)} J`;
+  $("cQ").textContent = pm(h.Q, h.u_Q, "kal");
+  $("cDT").textContent = pm(h.dT, h.u_dT, "°C");
+  $("cJ").textContent = pm(h.J, h.u_J, "J/kal");
+  $("cP").textContent = `${angka(h.P)} W`;
+  $("cPe").textContent = pm(h.P_eff, h.u_Peff, "W");
+  $("cEta").textContent = `${pm(h.eta, h.u_eta)} %   (daya hilang ${angka(h.P_hilang)} W)`;
+
+  $("btnZip").disabled = false;
+  setTab("Ringkasan Hasil");
+}
+$("btnProses").onclick = prosesAnalisis;
+
+/* ====================================================================
+   UNDUH SEMUA HASIL (ZIP)
+   ==================================================================== */
+function chartToDataURL(config, w, h){
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  const ch = new Chart(cv, config);
+  const url = cv.toDataURL("image/png");
+  ch.destroy();
+  return url;
+}
+
+function teksKePdf(teks, judul){
+  const lines = bungkusBaris(teks).split("\n");
+  const per = 55, W = 1240, H = 1754;            // A4 pada 150 dpi
+  const pages = [];
+  for (let i = 0; i < lines.length; i += per) pages.push(lines.slice(i, i + per));
+  if (!pages.length) pages.push([""]);
+  const {jsPDF} = window.jspdf;
+  const pdf = new jsPDF({unit:"pt", format:"a4"});
+  pages.forEach((pg, idx) => {
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const g = cv.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, W, H);
+    g.fillStyle = "#000"; g.textBaseline = "top";
+    let y;
+    if (idx === 0){ g.font = 'bold 27px "Segoe UI", Arial, sans-serif'; g.fillText(judul, 25, 24); y = Math.round(H * 0.07); }
+    else y = Math.round(H * 0.02);
+    g.font = '17.7px "DejaVu Sans Mono", Consolas, "Courier New", monospace';
+    const lh = 21.5;
+    pg.forEach((ln, i) => g.fillText(ln, 25, y + i * lh));
+    if (idx > 0) pdf.addPage();
+    pdf.addImage(cv.toDataURL("image/png"), "PNG", 0, 0, 595.28, 841.89);
+  });
+  return pdf.output("arraybuffer");
+}
+
+function ringkasanPng(h){
+  const W = 1200, H = 1125, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const g = cv.getContext("2d");
+  g.fillStyle = C.BG; g.fillRect(0, 0, W, H);
+  const data = [
+    ["ENERGI LISTRIK (W)", `${angka(h.W)} J`, C.BLUE],
+    ["KALOR DISERAP AIR (Q)", pm(h.Q, h.u_Q, "kal"), C.GREEN],
+    ["PERUBAHAN SUHU (ΔT)", pm(h.dT, h.u_dT, "°C"), C.YELLOW],
+    ["TETAPAN JOULE (J)", pm(h.J, h.u_J, "J/kal"), C.PURPLE],
+    ["DAYA LISTRIK (P)", `${angka(h.P)} W`, C.BLUE],
+    ["DAYA EFEKTIF (P efektif)", pm(h.P_eff, h.u_Peff, "W"), C.GREEN],
+    ["EFISIENSI PEMANASAN (η)", pm(h.eta, h.u_eta, "%"), C.PURPLE]
+  ];
+  const pos = [[0,0,1],[0,1,1],[1,0,1],[1,1,1],[2,0,1],[2,1,1],[3,0,2]];
+  data.forEach(([jd, nl, wr], i) => {
+    const [r, c, span] = pos[i];
+    const x = (0.04 + c * 0.48) * W, wd = (0.44 * span + (span === 2 ? 0.04 : 0)) * W;
+    const yb = 0.77 - r * 0.24, hh = 0.21 * H, y = (1 - (yb + 0.21)) * H;
+    g.fillStyle = wr; g.fillRect(x, y, wd, hh);
+    g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.font = 'bold 21px "Segoe UI", Arial, sans-serif'; g.fillText(jd, x + wd / 2, y + hh * 0.3);
+    g.font = 'bold 33px "Segoe UI", Arial, sans-serif'; g.fillText(nl, x + wd / 2, y + hh * 0.7);
+  });
+  return cv.toDataURL("image/png");
+}
+
+function dayaPng(h){
+  const nilai = [h.P, h.P_eff, Math.max(h.P_hilang, 0)];
+  const labelPlugin = {id:"vl", afterDatasetsDraw(ch){
+    const {ctx} = ch; ctx.save(); ctx.fillStyle = C.BLUE_DARK; ctx.font = "bold 22px 'Segoe UI', Arial, sans-serif"; ctx.textAlign = "center";
+    ch.getDatasetMeta(0).data.forEach((b, i) => ctx.fillText(`${angka(nilai[i])} W`, b.x, b.y - 8));
+    ctx.restore();
+  }};
+  const cfg = {
+    type:"bar",
+    data:{labels:["Daya listrik (P)", ["Daya efektif", "(diserap air)"], "Daya hilang"], datasets:[{data:nilai, backgroundColor:[C.BLUE, C.GREEN, C.RED], barPercentage:0.55}]},
+    options:{responsive:false, animation:false, devicePixelRatio:1, font:{size:20},
+      plugins:{legend:{display:false}, title:{display:true, text:`Perbandingan Daya Listrik dan Daya Efektif  (η = ${fix(h.eta, 1)}%)`, color:C.BLUE_DARK, font:{size:24}}},
+      scales:{y:{beginAtZero:true, max:Math.max(...nilai) > 0 ? Math.max(...nilai) * 1.18 : 1, title:{display:true, text:"Daya (W)"}, grid:gridOpt}, x:{grid:{display:false}}}},
+    plugins:[bgPlugin, labelPlugin]
+  };
+  return chartToDataURL(cfg, 1050, 675);
+}
+
+$("btnZip").onclick = async () => {
+  const h = R_.hasil;
+  if (!h){ await modal("Belum ada hasil", "Klik 'Proses Analisis' terlebih dahulu sebelum mengunduh hasil."); return; }
+  try {
+    const zip = new JSZip();
+
+    // 1) grafik suhu
+    const gcfg = graphConfig(R_.waktu, R_.suhu, {font:22, fixed:true, dpr:1, pr:5, bw:2.5});
+    zip.file("grafik_suhu.png", chartToDataURL(gcfg, 1600, 760).split(",")[1], {base64:true});
+
+    // 2) data mentah + parameter + hasil -> Excel
+    const wb = XLSX.utils.book_new();
+    const dataRows = [["Waktu (s)", "Suhu (°C)"], ...R_.waktu.map((w, i) => [w, R_.suhu[i]])];
+    const paramRows = [["Parameter", "Nilai"],
+      ["Tegangan (V) yang dipakai", h.V], ["Hambatan elemen (R) yang dipakai (Ω)", h.R], ["V awal (V)", h.V_awal], ["V akhir (V)", h.V_akhir],
+      ["R awal (Ω)", h.R_awal], ["R akhir (Ω)", h.R_akhir], ["Daya (P = V²/R)", h.P], ["Arus (I = V/R)", h.I], ["Massa air (m)", h.m],
+      ["Kalor jenis (c)", h.c], ["Waktu eksperimen (t)", h.t], ["Suhu awal (T0)", h.T0], ["Suhu akhir (T1)", h.T1], ["Perubahan suhu (ΔT)", h.dT],
+      ["Sensor suhu", SENSOR_NAMA], ["Ketidakpastian sensor (± °C)", SENSOR_U], ["Catatan massa", h.catatan_massa || "diinput langsung dalam gram"]];
+    const hasilRows = [["Besaran", "Satuan", "Nilai", "Ketidakpastian absolut (±)"],
+      ["Energi listrik W (J)", "J", h.W, null], ["Kalor Q (kal)", "kal", h.Q, h.u_Q], ["Kalor Q (J)", "J", h.Q_J, h.u_Q * J_REFERENSI],
+      ["Tetapan Joule J (J/kal)", "J/kal", h.J, h.u_J], ["Daya listrik P (W)", "W", h.P, null], ["Daya efektif (W)", "W", h.P_eff, h.u_Peff],
+      ["Daya hilang (W)", "W", h.P_hilang, h.u_Peff], ["Efisiensi (%)", "%", h.eta, h.u_eta]];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dataRows), "Data Mentah");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(paramRows), "Parameter Eksperimen");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(hasilRows), "Hasil & Perbandingan Daya");
+    zip.file("data_mentah.xlsx", XLSX.write(wb, {bookType:"xlsx", type:"array"}));
+
+    // 3) perbandingan daya
+    zip.file("perbandingan_daya.png", dayaPng(h).split(",")[1], {base64:true});
+
+    // 4) hasil perhitungan -> PDF
+    zip.file("hasil_perhitungan.pdf", teksKePdf(R_.teksParam.trim() + "\n\n" + R_.teksCalc.trim(), "Hasil Perhitungan - Energi Listrik ke Kalor"));
+
+    // 5) materi -> PDF
+    zip.file("materi_interpretasi.pdf", teksKePdf(R_.teksMateri.trim(), "Materi & Interpretasi - Energi Listrik ke Kalor"));
+
+    // 6) ringkasan
+    zip.file("ringkasan_hasil.png", ringkasanPng(h).split(",")[1], {base64:true});
+
+    const blob = await zip.generateAsync({type:"blob", compression:"DEFLATE"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "Hasil_EnergiListrik_ke_Kalor.zip";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  } catch(e){
+    await modal("Gagal menyimpan", "Terjadi kesalahan saat membuat file ZIP.\n\nDetail: " + e.message);
+    return;
+  }
+  await modal("Berhasil disimpan",
+    "Semua hasil berhasil disimpan dalam 1 file ZIP:\nHasil_EnergiListrik_ke_Kalor.zip\n\nIsi ZIP:\n🖼 grafik_suhu.png\n📊 data_mentah.xlsx\n📄 hasil_perhitungan.pdf\n📄 materi_interpretasi.pdf\n🖼 ringkasan_hasil.png\n🖼 perbandingan_daya.png");
+};
+
+/* ====================================================================
+   INISIALISASI
+   ==================================================================== */
+loadParams(); updateArus(); initRTChart(); connectMQTT();
 </script>
 </body>
 </html>
